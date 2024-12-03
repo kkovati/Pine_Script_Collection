@@ -1,0 +1,63 @@
+// Channel Brakeout Strategy
+
+//@version=6
+strategy(title = "Channel Brakeout Strategy", shorttitle = "ChBrk", overlay = true, initial_capital = 1000, currency = currency.EUR) 
+//commission_type = strategy.commission.percent, commission_value = 0.1) // margin_long=100, margin_short=100
+
+inner_channel = input.float(6, title = "Take Profit [% / 10]") / 1000
+outer_channel = input.float(3, title = "Stop Loss [% / 10]") / 1000
+//init_pos_size = input.float(1, title = "init_pos_size [EUR]")
+src = input.source(close, title = "Source")
+
+// Determine entry point
+// Currently: RSI is in top bottom 20
+var next_dir = "no" // "buy" "sell"
+rsi = ta.rsi(close, 20)
+if rsi > 80
+    next_dir := "buy"
+else if rsi < 20
+    next_dir := "sell"
+else
+    next_dir := "no" 
+
+// Determine channel
+if next_dir == "buy"
+    
+
+
+var float pos_size = init_pos_size / 2
+var int wintrades = 0
+var losstrades = 0
+
+// Calculate position size
+if strategy.opentrades == 0 and next_dir != "no"
+    if strategy.wintrades == wintrades
+        // last trade loss (or initial trade)
+        pos_size := pos_size * 2          
+    else    
+        // last trade won
+        pos_size := init_pos_size 
+        wintrades := strategy.wintrades
+
+// Long
+if strategy.opentrades == 0 and next_dir == "buy"
+    entry_name = str.tostring(bar_index) + "_buy"
+    strategy.entry(entry_name, strategy.long, qty = (pos_size / close))
+    strategy.exit(entry_name + "_exit", entry_name,
+                  limit = close * (1 + take_profit),
+                  stop = close * (1 - stop_loss))
+    //next_dir := "sell"  // Channel brakeout prediction
+
+// Short
+else if strategy.opentrades == 0 and next_dir == "sell"
+    entry_name = str.tostring(bar_index) + "_sell"
+    strategy.entry(entry_name, strategy.short, qty = (pos_size / close))
+    strategy.exit(entry_name + "_exit", entry_name,
+                  limit = close * (1 - take_profit),
+                  stop = close * (1 + stop_loss))
+    //next_dir := "buy"  // Channel brakeout prediction
+
+bgcolor(999 < pos_size ? #5000FF40 : color(na))
+
+//plot(strategy.equity)
+//plot(strategy.position_size)
