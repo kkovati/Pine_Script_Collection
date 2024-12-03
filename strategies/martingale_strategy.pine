@@ -1,0 +1,92 @@
+// Martingale channel brakeout strategy
+
+//@version=6
+strategy(title="Martingale strategy", shorttitle="MartStrat", overlay=true, initial_capital=1000, currency=currency.EUR) //, commission_type = strategy.commission.percent, commission_value = 0.1) // margin_long=100, margin_short=100
+
+take_profit = input.float(6, title = "Take Profit [% / 10]") / 1000
+stop_loss = input.float(3, title = "Stop Loss [% / 10]") / 1000
+init_pos_size = input.float(1, title = "init_pos_size [EUR]")
+//src = input.source(close, title = "Source")
+src = close  // TODO open
+
+var next_dir = "no" // "buy" "sell"
+var float pos_size = init_pos_size / 2
+var int wintrades = 0
+var losstrades = 0
+
+// EMA 200 predicts the direction
+//ema200 = ta.ema(src, 200)
+//if (close - ema200) / ema200 > 0.005
+//    next_dir := "buy"
+//else if (close - ema200) / ema200 < -0.005
+//    next_dir := "sell"
+//else
+//    next_dir := "no" 
+////plot(ema200)
+
+// RSI predicts the direction
+//rsi_len = input.int(14, title = "RSI length")
+//overBought = input.int(70, title = "Overbought")
+//overSold = input.int(30, title = "Oversold")
+//vrsi = ta.rsi(src, rsi_len)
+//co = ta.crossover(vrsi, overSold)
+//cu = ta.crossunder(vrsi, overBought)
+//if (not na(vrsi))
+//	if (co)
+//		next_dir := "buy"
+//	else if (cu)
+//		next_dir := "sell"
+//    else 
+//        next_dir := "no" 
+////plot(strategy.equity, title="equity", color=color.red, linewidth=2, style=plot.style_areabr)
+
+
+// ZLSMA predicts the direction
+length = input.int(14, title = "Lin Reg Length")
+var offset = 0
+lsma = ta.linreg(src, length, offset)
+lsma2 = ta.linreg(lsma, length, offset)
+zlsma = 2 * lsma - lsma2
+dzlsma = zlsma - zlsma[1]
+ema200 = ta.ema(src, 200)
+longCondition = ta.crossover(dzlsma, 0) and src > ema200 and dzlsma[1] < 0 and dzlsma[2] < 0 and dzlsma[3] < 0 and dzlsma[4] < 0
+shortCondition = ta.crossunder(dzlsma, 0) and src < ema200 and dzlsma[1] > 0 and dzlsma[2] > 0 and dzlsma[3] > 0 and dzlsma[4] > 0
+if longCondition
+    next_dir := "buy"
+else if shortCondition
+    next_dir := "sell"
+else
+    next_dir := "no" 
+
+// Calculate position size
+if strategy.opentrades == 0 and next_dir != "no"
+    if strategy.wintrades == wintrades
+        // last trade loss (or initial trade)
+        pos_size := pos_size * 2          
+    else    
+        // last trade won
+        pos_size := init_pos_size 
+        wintrades := strategy.wintrades
+
+// Long
+if strategy.opentrades == 0 and next_dir == "buy"
+    entry_name = str.tostring(bar_index) + "_buy"
+    strategy.entry(entry_name, strategy.long, qty = (pos_size / close))
+    strategy.exit(entry_name + "_exit", entry_name,
+                  limit = close * (1 + take_profit),
+                  stop = close * (1 - stop_loss))
+    //next_dir := "sell"  // Channel brakeout prediction
+
+// Short
+else if strategy.opentrades == 0 and next_dir == "sell"
+    entry_name = str.tostring(bar_index) + "_sell"
+    strategy.entry(entry_name, strategy.short, qty = (pos_size / close))
+    strategy.exit(entry_name + "_exit", entry_name,
+                  limit = close * (1 - take_profit),
+                  stop = close * (1 + stop_loss))
+    //next_dir := "buy"  // Channel brakeout prediction
+
+bgcolor(999 < pos_size ? #5000FF40 : color(na))
+
+//plot(strategy.equity)
+//plot(strategy.position_size)
