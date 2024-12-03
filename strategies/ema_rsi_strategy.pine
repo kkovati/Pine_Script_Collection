@@ -1,0 +1,35 @@
+// This strategy uses different length EMAs and RSI to find potential uptrends
+// See: "EMA+RSI Indicator" for this strategy's study
+
+//@version=6
+strategy(title="EMA+RSI Strategy", shorttitle="EmaRsiStrat", overlay=true, margin_long=100, margin_short=100)
+
+// EMA calculations
+ema42 = ta.ema(close, 42)
+ema100 = ta.ema(close, 100)
+ema200 = ta.ema(close, 200)
+plot(ema42, title="EMA42", color=color.red)
+plot(ema100, title="EMA100", color=color.green)
+plot(ema200, title="EMA200", color=color.blue)
+// Price and EMAs must be aligned in incremental order
+ema_cond = low > ema42 and ema42 > ema100 and ema100 > ema200
+// EMA derivatives must be positive
+ema_diff_cond = ema42 > ema42[1] and ema100 > ema100[1] and ema200 > ema200[1]
+
+// RSI
+len_rsi = 14
+up = ta.rma(math.max(ta.change(close), 0), len_rsi)
+down = ta.rma(-math.min(ta.change(close), 0), len_rsi)
+rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+// RSI must be high
+rsi_cond = rsi >= 50
+
+// Buy if all conditions are met
+buy_signal = ema_cond and ema_diff_cond and rsi_cond
+
+// TODO: use buy_signal crossover
+if (buy_signal)
+    strategy.entry("My Long Entry Id", strategy.long)
+// shortCondition = ta.crossunder(ta.sma(close, 14), ta.sma(close, 28))
+// if (shortCondition)
+//     strategy.entry("My Short Entry Id", strategy.short) 
