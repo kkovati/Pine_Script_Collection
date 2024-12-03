@@ -1,0 +1,20 @@
+// Monotonity Index shows how many times the high value is over the previos close on average.
+// The higher the index the more monotonically increasing the chart is.
+
+//@version=6
+indicator(title="Monotonity Index", shorttitle="MonoIdx")
+
+lookback_period = input.int(defval = 100, title = "Lookback period", minval = 1, step = 1000)
+ema_length = input.int(defval = 100, title = "EMA length", minval = 1, step = 1000)
+
+win_count = 0
+for i = 1 to lookback_period
+    if high > close[i]
+        win_count += 1
+        
+monotonity_index = win_count / lookback_period
+monotonity_index_ema = ta.ema(monotonity_index, ema_length)
+
+plot(monotonity_index, title="Monotonity index", color=color.blue)
+plot(monotonity_index_ema, title="Monotonity index EMA", color=color.yellow)
+hline(0.8, "80 Line", color=color.red)
