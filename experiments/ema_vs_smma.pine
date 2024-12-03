@@ -1,6 +1,8 @@
+// Compare Smoothed Moving Average (SMMA) with Exponention Moving Average (EMA)
+// Result: with proper parameters these are the same
+
 //@version=6
 indicator("EMA vs SMMA", shorttitle="EMAvsSMMA", overlay=true)
-// Compare Smoothed Moving Average (SMMA) with Exponention Moving Average (EMA)
 
 len_smma = 10
 smma = 0.0
