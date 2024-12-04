@@ -4,30 +4,46 @@
 strategy(title = "Channel Brakeout Strategy", shorttitle = "ChBrk", overlay = true, initial_capital = 1000, currency = currency.EUR) 
 //commission_type = strategy.commission.percent, commission_value = 0.1) // margin_long=100, margin_short=100
 
-inner_channel = input.float(6, title = "Take Profit [% / 10]") / 1000
-outer_channel = input.float(3, title = "Stop Loss [% / 10]") / 1000
-//init_pos_size = input.float(1, title = "init_pos_size [EUR]")
+// Parameters
+inner_channel = input.float(6, title = "Inner Channel [% / 10]") / 1000
+outer_channel = input.float(3, title = "Outer Channel [% / 10]") / 1000
+init_pos_size = input.float(1, title = "init_pos_size [EUR]")
 src = input.source(close, title = "Source")
+
+// State machine
+enum State
+    IDLE
+    BUY
+    SELL
+
+// Initialize the state (this happens only once)
+var State state = State.IDLE
 
 // Determine entry point
 // Currently: RSI is in top bottom 20
-var next_dir = "no" // "buy" "sell"
 rsi = ta.rsi(close, 20)
 if rsi > 80
-    next_dir := "buy"
+    state := State.BUY
 else if rsi < 20
-    next_dir := "sell"
+    state := State.SELL
 else
-    next_dir := "no" 
+    state := State.IDLE
 
 // Determine channel
-if next_dir == "buy"
-    
+if state == State.BUY
+    out_top = close * (1 + outer_channel)
+    in_top = close 
+    in_bot = close * (1 - inner_channel)
+    out_bot = close * (1 - inner_channel - outer_channel)
+else if state == State.SELL
+    out_top = close * (1 + inner_channel + outer_channel)
+    in_top = close * (1 + inner_channel)
+    in_bot = close 
+    out_bot = close * (1 - outer_channel)
 
-
-var float pos_size = init_pos_size / 2
+var float pos_size = init_pos_size
 var int wintrades = 0
-var losstrades = 0
+var int losstrades = 0
 
 // Calculate position size
 if strategy.opentrades == 0 and next_dir != "no"
