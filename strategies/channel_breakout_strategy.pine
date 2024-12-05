@@ -1,13 +1,13 @@
 // Channel Brakeout Strategy
 
 //@version=6
-strategy(title = "Channel Brakeout Strategy", shorttitle = "ChBrk", overlay = true, initial_capital = 1000, currency = currency.EUR) 
-//commission_type = strategy.commission.percent, commission_value = 0.1) // margin_long=100, margin_short=100
+strategy(title = "Channel Brakeout Strategy", shorttitle = "ChBrk", overlay = true, initial_capital = 1000, currency = currency.EUR)
+// commission_type = strategy.commission.percent, commission_value = 0.1) // margin_long=100, margin_short=100
 
 // Parameters
 inner_channel = input.float(6, title = "Inner Channel [% / 10]") / 1000
 outer_channel = input.float(3, title = "Outer Channel [% / 10]") / 1000
-init_pos_size = input.float(1, title = "init_pos_size [EUR]")
+init_pos_size = input.float(100, title = "init_pos_size [EUR]")
 src = input.source(close, title = "Source")
 
 // State machine
@@ -30,9 +30,10 @@ var float in_bot = 0
 var float out_bot = 0
 // Trade management
 var int n_lost_trades = 0  // Lost trades in a row
-//var int wintrades = 0
-//var int losstrades = 0
-//var float pos_size = init_pos_size
+var max_lost_trades = 4
+var int wintrades = 0
+var int losstrades = 0
+var float pos_size = 0
 
 // Determine entry point
 // Currently: RSI is in top or bottom 20
@@ -45,69 +46,79 @@ if state == State.IDLE
     else
         state := State.IDLE
 
-// Determine channel
+// Calculate channel
 if state == State.CALC_LONG_CH
     out_top := close * (1 + outer_channel)
     in_top := close 
     in_bot := close * (1 - inner_channel)
     out_bot := close * (1 - inner_channel - outer_channel)
     state := State.ENTER_LONG_ORD
-    if n_lost_trades == 0 // Assert
-        runtime.error("n_lost_trades == 0")
+    if n_lost_trades != 0 // Assert
+        runtime.error("n_lost_trades != 0")
 else if state == State.CALC_SHORT_CH
     out_top := close * (1 + inner_channel + outer_channel)
     in_top := close * (1 + inner_channel)
     in_bot := close 
     out_bot := close * (1 - outer_channel)
     state := State.ENTER_SHORT_ORD
-    if n_lost_trades == 0 // Assert
-        runtime.error("n_lost_trades == 0")
-
-// Enter first long order
-if state == State.ENTER_LONG_ORD
-    entry_name = str.tostring(bar_index) + "_long"
-    strategy.entry(entry_name, strategy.long, qty = init_pos_size)
-    strategy.exit(entry_name + "_exit", entry_name, limit = out_top, stop = in_bot)
-// Enter first short order
-if state == State.ENTER_SHORT_ORD
-    entry_name = str.tostring(bar_index) + "_short"
-    strategy.entry(entry_name, strategy.short, qty = init_pos_size)
-    strategy.exit(entry_name + "_exit", entry_name, limit = out_top, stop = in_bot)
-
-// Assert no. open trades
-if strategy.opentrades == 1
-    runtime.error("n_lost_trades == 0")
+    if n_lost_trades != 0 // Assert
+        runtime.error("n_lost_trades != 0")
 
 // Check if order is exited
 if (state == State.IN_LONG_ORD or state == State.IN_SHORT_ORD) and strategy.opentrades == 0
-
-
-
-    
+    // Last trade won    
+    if strategy.wintrades == wintrades + 1        
+        wintrades := strategy.wintrades
+        if losstrades != strategy.losstrades // Assert
+            runtime.error("losstrades != strategy.losstrades")
+        state := State.IDLE
+        n_lost_trades := 0
+    // Last trade lost
+    else if strategy.losstrades == losstrades + 1        
+        losstrades := strategy.losstrades
+        if wintrades != strategy.wintrades // Assert
+            runtime.error("wintrades != strategy.wintrades")
+        if state == State.IN_LONG_ORD
+            state := State.ENTER_SHORT_ORD
+        else if state == State.IN_SHORT_ORD
+            state := State.ENTER_LONG_ORD
+        n_lost_trades += 1    
+    else
+        runtime.error("Exit order error")
+    // Maximum no. lost trades
+    if n_lost_trades == max_lost_trades        
+        state := State.IDLE
+        n_lost_trades := 0
 
 // Calculate position size
-//if strategy.opentrades == 0 and next_dir != "no"
-//    if strategy.wintrades == wintrades
-//        // last trade loss (or initial trade)
-//        pos_size := pos_size * 2          
-//    else    
-//        // last trade won
-//        pos_size := init_pos_size 
-//        wintrades := strategy.wintrades
+if n_lost_trades == 0
+    pos_size := init_pos_size
+else if n_lost_trades == 1
+    pos_size := init_pos_size
+else if n_lost_trades == 2
+    pos_size := init_pos_size * 1.5
+else if n_lost_trades == 3
+    pos_size := init_pos_size * 2.0
 
+// Enter long order
+if state == State.ENTER_LONG_ORD
+    entry_name = str.tostring(bar_index) + "_long"
+    strategy.entry(entry_name, strategy.long, qty = pos_size)
+    strategy.exit(entry_name + "_exit", entry_name, limit = out_top, stop = in_bot)
+    state := State.IN_LONG_ORD
+    //if strategy.opentrades != 1 // Assert
+    //    runtime.error("strategy.opentrades != 1")
+// Enter short order
+if state == State.ENTER_SHORT_ORD
+    entry_name = str.tostring(bar_index) + "_short"
+    strategy.entry(entry_name, strategy.short, qty = pos_size)
+    strategy.exit(entry_name + "_exit", entry_name, limit = out_top, stop = in_bot)
+    state := State.IN_SHORT_ORD
+    //if strategy.opentrades != 1 // Assert
+    //    runtime.error("strategy.opentrades != 1")
 
-/
-
-// Short
-else if strategy.opentrades == 0 and next_dir == "sell"
-    entry_name = str.tostring(bar_index) + "_sell"
-    strategy.entry(entry_name, strategy.short, qty = (pos_size / close))
-    strategy.exit(entry_name + "_exit", entry_name,
-                  limit = close * (1 - take_profit),
-                  stop = close * (1 + stop_loss))
-    //next_dir := "buy"  // Channel brakeout prediction
-
+// Plotting
+plot(rsi)
 bgcolor(999 < pos_size ? #5000FF40 : color(na))
-
 //plot(strategy.equity)
 //plot(strategy.position_size)
