@@ -23,3 +23,10 @@ Pine Script is a domain-specific programming language created by TradingView to 
 - **Strategies**
   - EMA_Strategy.pine: An exponential moving average strategy for trend following
   - Breakout_Strategy.pine: Identifies breakouts using price levels
+
+
+## Useful Tips for Pine Script
+- **Debugging**
+
+  [How to get a value of the variable for debugging purposes](https://www.tradingview.com/support/solutions/43000494311-how-to-get-a-value-of-the-variable-for-debugging-purposes/)
+- 
