@@ -13,56 +13,90 @@ src = input.source(close, title = "Source")
 // State machine
 enum State
     IDLE
-    BUY
-    SELL
+    CALC_LONG_CH
+    CALC_SHORT_CH
+    ENTER_LONG_ORD
+    ENTER_SHORT_ORD
+    IN_LONG_ORD
+    IN_SHORT_ORD
 
-// Initialize the state (this happens only once)
+// Initialize the state and variables (this happens only once)
+// State
 var State state = State.IDLE
+// Channel prices
+var float out_top = 0
+var float in_top = 0
+var float in_bot = 0
+var float out_bot = 0
+// Trade management
+var int n_lost_trades = 0  // Lost trades in a row
+//var int wintrades = 0
+//var int losstrades = 0
+//var float pos_size = init_pos_size
 
 // Determine entry point
-// Currently: RSI is in top bottom 20
-rsi = ta.rsi(close, 20)
-if rsi > 80
-    state := State.BUY
-else if rsi < 20
-    state := State.SELL
-else
-    state := State.IDLE
+// Currently: RSI is in top or bottom 20
+rsi = ta.rsi(close, 20)  // Calculate RSI at each bar
+if state == State.IDLE    
+    if rsi > 80
+        state := State.CALC_LONG_CH
+    else if rsi < 20
+        state := State.CALC_SHORT_CH
+    else
+        state := State.IDLE
 
 // Determine channel
-if state == State.BUY
-    out_top = close * (1 + outer_channel)
-    in_top = close 
-    in_bot = close * (1 - inner_channel)
-    out_bot = close * (1 - inner_channel - outer_channel)
-else if state == State.SELL
-    out_top = close * (1 + inner_channel + outer_channel)
-    in_top = close * (1 + inner_channel)
-    in_bot = close 
-    out_bot = close * (1 - outer_channel)
+if state == State.CALC_LONG_CH
+    out_top := close * (1 + outer_channel)
+    in_top := close 
+    in_bot := close * (1 - inner_channel)
+    out_bot := close * (1 - inner_channel - outer_channel)
+    state := State.ENTER_LONG_ORD
+    if n_lost_trades == 0 // Assert
+        runtime.error("n_lost_trades == 0")
+else if state == State.CALC_SHORT_CH
+    out_top := close * (1 + inner_channel + outer_channel)
+    in_top := close * (1 + inner_channel)
+    in_bot := close 
+    out_bot := close * (1 - outer_channel)
+    state := State.ENTER_SHORT_ORD
+    if n_lost_trades == 0 // Assert
+        runtime.error("n_lost_trades == 0")
 
-var float pos_size = init_pos_size
-var int wintrades = 0
-var int losstrades = 0
+// Enter first long order
+if state == State.ENTER_LONG_ORD
+    entry_name = str.tostring(bar_index) + "_long"
+    strategy.entry(entry_name, strategy.long, qty = init_pos_size)
+    strategy.exit(entry_name + "_exit", entry_name, limit = out_top, stop = in_bot)
+// Enter first short order
+if state == State.ENTER_SHORT_ORD
+    entry_name = str.tostring(bar_index) + "_short"
+    strategy.entry(entry_name, strategy.short, qty = init_pos_size)
+    strategy.exit(entry_name + "_exit", entry_name, limit = out_top, stop = in_bot)
+
+// Assert no. open trades
+if strategy.opentrades == 1
+    runtime.error("n_lost_trades == 0")
+
+// Check if order is exited
+if (state == State.IN_LONG_ORD or state == State.IN_SHORT_ORD) and strategy.opentrades == 0
+
+
+
+    
 
 // Calculate position size
-if strategy.opentrades == 0 and next_dir != "no"
-    if strategy.wintrades == wintrades
-        // last trade loss (or initial trade)
-        pos_size := pos_size * 2          
-    else    
-        // last trade won
-        pos_size := init_pos_size 
-        wintrades := strategy.wintrades
+//if strategy.opentrades == 0 and next_dir != "no"
+//    if strategy.wintrades == wintrades
+//        // last trade loss (or initial trade)
+//        pos_size := pos_size * 2          
+//    else    
+//        // last trade won
+//        pos_size := init_pos_size 
+//        wintrades := strategy.wintrades
 
-// Long
-if strategy.opentrades == 0 and next_dir == "buy"
-    entry_name = str.tostring(bar_index) + "_buy"
-    strategy.entry(entry_name, strategy.long, qty = (pos_size / close))
-    strategy.exit(entry_name + "_exit", entry_name,
-                  limit = close * (1 + take_profit),
-                  stop = close * (1 - stop_loss))
-    //next_dir := "sell"  // Channel brakeout prediction
+
+/
 
 // Short
 else if strategy.opentrades == 0 and next_dir == "sell"
