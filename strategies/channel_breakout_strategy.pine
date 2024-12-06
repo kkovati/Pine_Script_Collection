@@ -18,6 +18,58 @@ float psf4 = 0.3
 float psf5 = 0.3
 float psf6 = 0.3
 
+///////////////
+// FUNCTIONS //
+///////////////
+
+// This function uses different length EMAs, its derivatives and RSI to find potential uptrends.
+ema_diff_rsi_pos() =>
+    // EMA calculations
+    ema42 = ta.ema(close, 42)
+    ema100 = ta.ema(close, 100)
+    ema200 = ta.ema(close, 200)
+    // Price and EMAs must be aligned in incremental order
+    ema_cond = low > ema42 and ema42 > ema100 and ema100 > ema200
+    // EMA derivatives must be positive
+    ema_diff_cond = ema42 > ema42[1] and ema100 > ema100[1] and ema200 > ema200[1]
+
+    // RSI
+    len_rsi = 14
+    up = ta.rma(math.max(ta.change(close), 0), len_rsi)
+    down = ta.rma(-math.min(ta.change(close), 0), len_rsi)
+    rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+    // RSI must be high
+    rsi_cond = rsi >= 50
+
+    // Check all conditions
+    ema_cond and ema_diff_cond and rsi_cond
+
+// Same but the negative version
+ema_diff_rsi_neg() =>
+    // EMA calculations
+    ema42 = ta.ema(close, 42)
+    ema100 = ta.ema(close, 100)
+    ema200 = ta.ema(close, 200)
+    // Price and EMAs must be aligned in decremental order
+    ema_cond = high < ema42 and ema42 < ema100 and ema100 < ema200
+    // EMA derivatives must be negative
+    ema_diff_cond = ema42 < ema42[1] and ema100 < ema100[1] and ema200 < ema200[1]
+
+    // RSI
+    len_rsi = 14
+    up = ta.rma(math.max(ta.change(close), 0), len_rsi)
+    down = ta.rma(-math.min(ta.change(close), 0), len_rsi)
+    rsi = down == 0 ? 100 : up == 0 ? 0 : 100 - (100 / (1 + up / down))
+    // RSI must be low
+    rsi_cond = rsi <= 50
+
+    // Check all conditions
+    ema_cond and ema_diff_cond and rsi_cond
+
+///////////
+// LOGIC //
+///////////
+
 // State machine
 enum State
     IDLE
@@ -47,11 +99,14 @@ var int start_bar = 0
 
 // Determine entry point
 // Currently: RSI is in top or bottom 20
-rsi = ta.rsi(close, 24)  // Calculate RSI at each bar
+// rsi = ta.rsi(close, 24)  // Calculate RSI at each bar
+// rsi > 80 rsi < 20
+bool edr_pos = ema_diff_rsi_pos()
+bool edr_neg = ema_diff_rsi_neg()
 if state == State.IDLE
-    if rsi > 80
+    if edr_pos
         state := State.CALC_LONG_CH
-    else if rsi < 20
+    else if edr_neg
         state := State.CALC_SHORT_CH
     else
         state := State.IDLE
@@ -140,8 +195,7 @@ if state == State.ENTER_SHORT_ORD
     state := State.IN_SHORT_ORD
  
 // Plot
-//plot(rsi)
-//bgcolor(999 < pos_size ? #5000FF40 : color(na))
+bgcolor(edr_pos ? #00FF0030 : #FF000030)
 //label.new(bar_index, high, text=str.tostring(state))
 //plot(strategy.equity)
 //plot(strategy.position_size)
