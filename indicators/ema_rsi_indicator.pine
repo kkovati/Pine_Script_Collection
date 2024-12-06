@@ -1,5 +1,5 @@
-// This indicator uses different length EMAs and RSI to find potential uptrends
-// Plus there is a Buy marker in it, which marks the best entry points
+// This indicator uses different length EMAs, its derivatives and RSI to find potential uptrends.
+// Plus there is a Buy marker in it, which marks the best entry points.
 
 //@version=6
 indicator(title="EMA+RSI Indicator", shorttitle="EmaRsiInd", overlay=true)
