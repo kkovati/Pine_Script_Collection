@@ -9,6 +9,8 @@ Pine Script is a domain-specific programming language created by TradingView to 
 
 [Pine Script Documentation](https://www.tradingview.com/pine-script-docs/)
 
+[Pine Script Reference Manual](https://www.tradingview.com/pine-script-reference/v6/)
+
 ## How to Use
 1. Sign up to [TradingView](https://www.tradingview.com/)
 2. Open a chart (e.g. [NVDA](https://www.tradingview.com/chart/?symbol=NASDAQ%3ANVDA))
