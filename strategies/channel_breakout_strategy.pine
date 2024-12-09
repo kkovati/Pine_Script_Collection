@@ -66,6 +66,13 @@ ema_diff_rsi_neg() =>
     // Check all conditions
     ema_cond and ema_diff_cond and rsi_cond
 
+// Variance
+variance() =>
+    length = 14
+    mean = ta.sma(close, length)  // Mean
+    sum_squares = math.sum(math.pow(close - mean, 2), length)  // Sum of squared deviations
+    sum_squares / length  // Divide by the number of points to get variance
+
 ///////////
 // LOGIC //
 ///////////
@@ -199,3 +206,4 @@ bgcolor(edr_pos ? #00FF0030 : #FF000030)
 //label.new(bar_index, high, text=str.tostring(state))
 //plot(strategy.equity)
 //plot(strategy.position_size)
+
