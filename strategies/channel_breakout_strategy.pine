@@ -73,6 +73,14 @@ variance() =>
     sum_squares = math.sum(math.pow(close - mean, 2), length)  // Sum of squared deviations
     sum_squares / length  // Divide by the number of points to get variance
 
+// Normalized variance (returns-based)
+normalized_variance() =>
+    length = 14
+    returns = 100 * ta.change(close) / close[1]  // Calculate percentage changes (returns)
+    mean_return = ta.sma(returns, length)  // Calculate the mean of returns
+    sum_squares = math.sum(math.pow(returns - mean_return, 2), length)  // Calculate the sum of squared deviations
+    sum_squares / length  // Divide by the number of points to get variance
+
 ///////////
 // LOGIC //
 ///////////
@@ -101,19 +109,35 @@ var int max_lost_trades = 4
 var int wintrades = 0
 var int losstrades = 0
 var float pos_size = 0
+
 // Visualization
+enum VisualState
+    IDLE
+    PLOT
+var VisualState visual_state = VisualState.IDLE
 var int start_bar = 0
 
-// Determine entry point
-// Currently: RSI is in top or bottom 20
-// rsi = ta.rsi(close, 24)  // Calculate RSI at each bar
-// rsi > 80 rsi < 20
+// Caclulate indicators at each bar
+// rsi = ta.rsi(close, 24)  // RSI
 bool edr_pos = ema_diff_rsi_pos()
 bool edr_neg = ema_diff_rsi_neg()
+
+// Check long / short condition
+// RSI
+// bool long_cond = rsi > 80
+// bool short_cond = rsi < 20
+// EDR
+bool long_cond = edr_pos
+bool short_cond = edr_neg
+// Assert
+if long_cond and short_cond
+    runtime.error("long_cond and short_cond")
+
+// Determine entry point
 if state == State.IDLE
-    if edr_pos
+    if long_cond
         state := State.CALC_LONG_CH
-    else if edr_neg
+    else if short_cond
         state := State.CALC_SHORT_CH
     else
         state := State.IDLE
@@ -147,11 +171,7 @@ if (state == State.IN_LONG_ORD or state == State.IN_SHORT_ORD) and strategy.open
             runtime.error("losstrades != strategy.losstrades")
         state := State.IDLE
         n_lost_trades := 0
-        // Draw channel
-        line.new(x1=start_bar, y1=out_top, x2=bar_index, y2=out_top, color=color.blue, width=2)
-        line.new(x1=start_bar, y1=in_top, x2=bar_index, y2=in_top, color=color.red, width=2)
-        line.new(x1=start_bar, y1=in_bot, x2=bar_index, y2=in_bot, color=color.red, width=2)
-        line.new(x1=start_bar, y1=out_bot, x2=bar_index, y2=out_bot, color=color.blue, width=2)
+        visual_state := VisualState.PLOT
     // Last trade lost
     else if strategy.losstrades == losstrades + 1        
         losstrades := strategy.losstrades
@@ -164,7 +184,6 @@ if (state == State.IN_LONG_ORD or state == State.IN_SHORT_ORD) and strategy.open
         n_lost_trades += 1    
     else
         runtime.error("Error after order exit:" + " s.w:" + str.tostring(strategy.wintrades) + " w:" + str.tostring(wintrades) + " s.l:" + str.tostring(strategy.losstrades) + " l:" + str.tostring(losstrades))
- 
 
 // Calculate position size
 if n_lost_trades == 0
@@ -185,6 +204,7 @@ else if n_lost_trades == 7
     // Maximum no. lost trades
     state := State.IDLE
     n_lost_trades := 0
+    visual_state := VisualState.PLOT
 else
     runtime.error("n_lost_trades")
 
@@ -201,9 +221,26 @@ if state == State.ENTER_SHORT_ORD
     strategy.exit(entry_name + "_exit", from_entry = entry_name, limit = out_bot, stop = in_top)
     state := State.IN_SHORT_ORD
  
-// Plot
-bgcolor(edr_pos ? #00FF0030 : #FF000030)
+
+///////////////////
+// VISUALIZATION //
+///////////////////
+
+// Color background
+//bgcolor(edr_pos ? #00FF0030 : #FF000030)
+bg_color = long_cond ? #00FF0030 :  // Semi-transparent green - color.new(color.green, 70)
+           short_cond ? #FF000030 : // Semi-transparent red - color.new(color.red, 70)
+           na                         // No color
+bgcolor(bg_color)
+
+// Draw channel
+if visual_state == VisualState.PLOT or barstate.islast
+    line.new(x1=start_bar, y1=out_top, x2=bar_index, y2=out_top, color=color.blue, width=2)
+    line.new(x1=start_bar, y1=in_top, x2=bar_index, y2=in_top, color=color.red, width=2)
+    line.new(x1=start_bar, y1=in_bot, x2=bar_index, y2=in_bot, color=color.red, width=2)
+    line.new(x1=start_bar, y1=out_bot, x2=bar_index, y2=out_bot, color=color.blue, width=2)
+    visual_state := VisualState.IDLE
+
 //label.new(bar_index, high, text=str.tostring(state))
 //plot(strategy.equity)
 //plot(strategy.position_size)
-
