@@ -5,8 +5,8 @@ strategy(title = "Channel Brakeout Strategy", shorttitle = "ChBrk", overlay = tr
 // commission_type = strategy.commission.percent, commission_value = 0.1) // margin_long=100, margin_short=100
 
 // Parameters
-inner_channel = input.float(10, title = "Inner Channel [% / 10]") / 1000
-outer_channel = input.float(20, title = "Outer Channel [% / 10]") / 1000
+inner_channel = input.float(30, title = "Inner Channel [% / 10]") / 1000
+outer_channel = input.float(10, title = "Outer Channel [% / 10]") / 1000
 //init_pos_size = input.float(100, title = "init_pos_size [EUR]")
 //src = input.source(close, title = "Source")
 // Positition size factors
