@@ -114,6 +114,7 @@ var float pos_size = 0
 enum VisualState
     IDLE
     PLOT
+    PLOT_LOSS
 var VisualState visual_state = VisualState.IDLE
 var int start_bar = 0
 
@@ -204,7 +205,7 @@ else if n_lost_trades == 7
     // Maximum no. lost trades
     state := State.IDLE
     n_lost_trades := 0
-    visual_state := VisualState.PLOT
+    visual_state := VisualState.PLOT_LOSS
 else
     runtime.error("n_lost_trades")
 
@@ -233,12 +234,15 @@ bg_color = long_cond ? #00FF0030 :  // Semi-transparent green - color.new(color.
            na                         // No color
 bgcolor(bg_color)
 
+// Draw loss marker
+plotshape(visual_state == VisualState.PLOT_LOSS, style=shape.triangleup, location=location.belowbar, color=color.red, size=size.huge) 
+
 // Draw channel
-if visual_state == VisualState.PLOT or barstate.islast
+if visual_state == VisualState.PLOT or visual_state == VisualState.PLOT_LOSS or barstate.islast
     line.new(x1=start_bar, y1=out_top, x2=bar_index, y2=out_top, color=color.blue, width=2)
     line.new(x1=start_bar, y1=in_top, x2=bar_index, y2=in_top, color=color.red, width=2)
     line.new(x1=start_bar, y1=in_bot, x2=bar_index, y2=in_bot, color=color.red, width=2)
-    line.new(x1=start_bar, y1=out_bot, x2=bar_index, y2=out_bot, color=color.blue, width=2)
+    line.new(x1=start_bar, y1=out_bot, x2=bar_index, y2=out_bot, color=color.blue, width=2)    
     visual_state := VisualState.IDLE
 
 //label.new(bar_index, high, text=str.tostring(state))
