@@ -6,17 +6,20 @@ strategy(title = "Channel Brakeout Strategy", shorttitle = "ChBrk", overlay = tr
 
 // Parameters
 inner_channel = input.float(10, title = "Inner Channel [% / 10]") / 1000
-outer_channel = input.float(30, title = "Outer Channel [% / 10]") / 1000
+outer_channel = input.float(20, title = "Outer Channel [% / 10]") / 1000
 //init_pos_size = input.float(100, title = "init_pos_size [EUR]")
 //src = input.source(close, title = "Source")
 // Positition size factors
 float psf0 = 0.1
 float psf1 = 0.1
-float psf2 = 0.2
+float psf2 = 0.1
 float psf3 = 0.2
-float psf4 = 0.3
-float psf5 = 0.3
+float psf4 = 0.2
+float psf5 = 0.2
 float psf6 = 0.3
+float psf7 = 0.3
+float psf8 = 0.3
+float psf9 = 0.4
 
 ///////////////
 // FUNCTIONS //
@@ -202,6 +205,12 @@ else if n_lost_trades == 5
 else if n_lost_trades == 6
     pos_size := strategy.equity * psf6
 else if n_lost_trades == 7
+    pos_size := strategy.equity * psf7
+else if n_lost_trades == 8
+    pos_size := strategy.equity * psf8
+else if n_lost_trades == 9
+    pos_size := strategy.equity * psf9
+else if n_lost_trades == 10
     // Maximum no. lost trades
     state := State.IDLE
     n_lost_trades := 0
