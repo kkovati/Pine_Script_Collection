@@ -31,4 +31,3 @@ Pine Script is a domain-specific programming language created by TradingView to 
 - **Debugging**
 
   [How to get a value of the variable for debugging purposes](https://www.tradingview.com/support/solutions/43000494311-how-to-get-a-value-of-the-variable-for-debugging-purposes/)
-- 
